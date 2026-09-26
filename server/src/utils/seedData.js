@@ -17,8 +17,9 @@ const Event = require('../models/Event');
 const seedData = async () => {
   try {
     const userCount = await User.countDocuments();
-    if (userCount > 0) {
-      console.log('⚡ Database already contains data.');
+    const projectCount = await Project.countDocuments();
+    if (userCount > 0 && projectCount > 0) {
+      console.log('⚡ Database already contains full data.');
       return;
     }
 
@@ -75,42 +76,51 @@ const seedData = async () => {
 
     const createdUsers = [];
     for (const u of usersToCreate) {
-      const user = await User.create(u);
+      let user = await User.findOne({ email: u.email });
+      if (!user) {
+        user = await User.create(u);
+      }
       createdUsers.push(user);
     }
 
     const [alex, bhavana, tejaswi, harsha, sarah] = createdUsers;
 
     // 2. Create Workspaces
-    const workspace1 = await Workspace.create({
-      name: 'Acme Product Cloud',
-      slug: 'acme-product-cloud',
-      description: 'Main product engineering and design collaboration headquarters.',
-      icon: '🚀',
-      color: '#6366f1',
-      owner: alex._id,
-      members: [
-        { user: alex._id, role: 'owner' },
-        { user: bhavana._id, role: 'admin' },
-        { user: tejaswi._id, role: 'admin' },
-        { user: harsha._id, role: 'member' },
-        { user: sarah._id, role: 'member' },
-      ],
-    });
+    let workspace1 = await Workspace.findOne({ slug: 'acme-product-cloud' });
+    if (!workspace1) {
+      workspace1 = await Workspace.create({
+        name: 'Acme Product Cloud',
+        slug: 'acme-product-cloud',
+        description: 'Main product engineering and design collaboration headquarters.',
+        icon: '⚡',
+        color: '#10b981',
+        owner: alex._id,
+        members: [
+          { user: alex._id, role: 'owner' },
+          { user: bhavana._id, role: 'admin' },
+          { user: tejaswi._id, role: 'admin' },
+          { user: harsha._id, role: 'member' },
+          { user: sarah._id, role: 'member' },
+        ],
+      });
+    }
 
-    const workspace2 = await Workspace.create({
-      name: 'Growth & Marketing',
-      slug: 'growth-marketing',
-      description: 'Brand campaigns, marketing sprints, and growth analytics.',
-      icon: '📈',
-      color: '#10b981',
-      owner: alex._id,
-      members: [
-        { user: alex._id, role: 'owner' },
-        { user: sarah._id, role: 'admin' },
-        { user: harsha._id, role: 'member' },
-      ],
-    });
+    let workspace2 = await Workspace.findOne({ slug: 'growth-marketing' });
+    if (!workspace2) {
+      workspace2 = await Workspace.create({
+        name: 'Growth & Marketing',
+        slug: 'growth-marketing',
+        description: 'Brand campaigns, marketing sprints, and growth analytics.',
+        icon: '📈',
+        color: '#f59e0b',
+        owner: alex._id,
+        members: [
+          { user: alex._id, role: 'owner' },
+          { user: sarah._id, role: 'admin' },
+          { user: harsha._id, role: 'member' },
+        ],
+      });
+    }
 
     // Set active workspace
     for (const u of createdUsers) {
@@ -514,5 +524,14 @@ Every state modification on the Kanban board or Document editor emits a scoped W
     console.error('Error seeding data:', error);
   }
 };
+
+if (require.main === module) {
+  require('dotenv').config();
+  const { connectDB } = require('../config/db');
+  connectDB().then(async () => {
+    await seedData();
+    process.exit(0);
+  });
+}
 
 module.exports = seedData;
